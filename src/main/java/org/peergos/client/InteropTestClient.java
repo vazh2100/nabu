@@ -102,9 +102,9 @@ public class InteropTestClient {
                     muxers.add(StreamMuxerProtocol.getYamux());
                 }
                 b.getMuxers().addAll(muxers);
-                for (ProtocolBinding<?> protocol : protocols) {
-                    b.getProtocols().add(protocol);
-                }
+            }
+            for (ProtocolBinding<?> protocol : protocols) {
+                b.getProtocols().add(protocol);
             }
             IdentifyOuterClass.Identify.Builder identifyBuilder = IdentifyOuterClass.Identify.newBuilder()
                     .setProtocolVersion("ipfs/0.1.0")
