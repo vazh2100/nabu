@@ -87,20 +87,19 @@ public class InteropTestClient {
                         QuicTransport.Ecdsa(
                                 privKey,
                                 (List<ProtocolBinding<?>>) p));
-            } else {
-                if (security.equals("noise")) {
-                    b.getSecureChannels().add((k, m) -> new NoiseXXSecureChannel(k, m));
-                } else if (security.equals("tls")) {
-                    b.getSecureChannels().add((k, m) -> new TlsSecureChannel(k, m, "ECDSA"));
-                }
-                List<StreamMuxerProtocol> muxers = new ArrayList<>();
-                if (muxer.equals("mplex")) {
-                    muxers.add(StreamMuxerProtocol.getMplex());
-                } else if (muxer.equals("yamux")) {
-                    muxers.add(StreamMuxerProtocol.getYamux());
-                }
-                b.getMuxers().addAll(muxers);
             }
+            if (security != null && security.equals("noise")) {
+                b.getSecureChannels().add((k, m) -> new NoiseXXSecureChannel(k, m));
+            } else if (security == null || security.equals("tls")) {
+                b.getSecureChannels().add((k, m) -> new TlsSecureChannel(k, m, "ECDSA"));
+            }
+            List<StreamMuxerProtocol> muxers = new ArrayList<>();
+            if (muxer != null && muxer.equals("mplex")) {
+                muxers.add(StreamMuxerProtocol.getMplex());
+            } else if (muxer == null || muxer.equals("yamux")) {
+                muxers.add(StreamMuxerProtocol.getYamux());
+            }
+            b.getMuxers().addAll(muxers);
             for (ProtocolBinding<?> protocol : protocols) {
                 b.getProtocols().add(protocol);
             }
