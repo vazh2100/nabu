@@ -66,7 +66,7 @@ public class InteropTestClient {
             throw new IllegalStateException("transport == null ||  muxer == null || security == null");
         }
         int port = 10000 + new Random().nextInt(50000);
-        boolean isTcp = "tcp".equals(transport);
+        boolean isTcp = transport != null && "tcp".equals(transport);
         Multiaddr address = Multiaddr.fromString("/ip4/" + ip + (isTcp ? "/tcp/" : "/udp/") + port + (isTcp ? "" : "/quic"));
         List<MultiAddress> swarmAddresses = List.of(new MultiAddress(address.toString()));
 
