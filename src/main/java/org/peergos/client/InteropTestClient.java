@@ -80,6 +80,7 @@ public class InteropTestClient {
         Host node = BuilderJKt.hostJ(Builder.Defaults.None, b -> {
             b.getIdentity().setFactory(() -> privKey);
 
+            b.getTransports().add(TcpTransport::new);
             if (transport.equals(QUIC_V1)) {
                 b.getSecureTransports().add(p ->
                     u ->
@@ -87,9 +88,6 @@ public class InteropTestClient {
                                 privKey,
                                 (List<ProtocolBinding<?>>) p));
             } else {
-                if (transport.equals("tcp")) {
-                    b.getTransports().add(TcpTransport::new);
-                }
                 if (security.equals("noise")) {
                     b.getSecureChannels().add((k, m) -> new NoiseXXSecureChannel(k, m));
                 } else if (security.equals("tls")) {
