@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 
 public class InteropTestClient {
 
-    private static final String QUIC_V1 = "quic_v1";
+    private static final String QUIC_V1 = "quic-v1";
     private static String getLocalIPAddress() throws SocketException {
         System.err.println("Getting localIP");
         List<NetworkInterface> interfaces = NetworkInterface.networkInterfaces().collect(Collectors.toList());
