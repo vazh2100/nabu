@@ -61,7 +61,7 @@ public class InteropTestClient {
                 " security=" + security + " is_dialer=" + is_dialer + " ip=" + ip +
                 " redis_addr=" + redis_addr + " test_timeout_seconds=" + test_timeout_seconds);
         if (transport.equals(QUIC_V1)) {
-            //special case quic
+            //special case quic as the muxer and security will be null
         } else if (transport == null ||  muxer == null || security == null) {
             throw new IllegalStateException("transport == null ||  muxer == null || security == null");
         }
@@ -69,45 +69,24 @@ public class InteropTestClient {
         Multiaddr address = Multiaddr.fromString("/ip4/" + ip + "/tcp/" + port);
         List<MultiAddress> swarmAddresses = List.of(new MultiAddress(address.toString()));
 
-        Ping pingProtocol = new Ping();
         List<ProtocolBinding> protocols = new ArrayList<>();
-        protocols.add(pingProtocol);
+        protocols.add(new Ping());
 
         PrivKey privKey = Ed25519Kt.generateEd25519KeyPair().getFirst();
         PeerId peerId = PeerId.fromPubKey(privKey.publicKey());
         Multiaddr advertisedAddr = address.withP2P(peerId);
         List<String> listenAddrs = new ArrayList<>();
         listenAddrs.addAll(swarmAddresses.stream().map(MultiAddress::toString).collect(Collectors.toList()));
-        Host node = null;
-        if (transport.equals("quic-v1")) {
-            String[] listenAddrsArray = listenAddrs.toArray(new String[0]);
-            List<ProtocolBinding<?>> availableProtocols = new ArrayList<>();
-            availableProtocols.add(pingProtocol);
+        Host node = BuilderJKt.hostJ(Builder.Defaults.None, b -> {
+            b.getIdentity().setFactory(() -> privKey);
 
-            IdentifyOuterClass.Identify.Builder identifyBuilder = IdentifyOuterClass.Identify.newBuilder()
-                    .setProtocolVersion("ipfs/0.1.0")
-                    .setAgentVersion("nabu/v0.1.0")
-                    .setPublicKey(ByteArrayExtKt.toProtobuf(privKey.publicKey().bytes()))
-                    .addAllListenAddrs(listenAddrs.stream()
-                            .map(Multiaddr::fromString)
-                            .map(Multiaddr::serialize)
-                            .map(ByteArrayExtKt::toProtobuf)
-                            .collect(Collectors.toList()));
-
-            for (ProtocolBinding<?> protocol : protocols) {
-                identifyBuilder = identifyBuilder.addAllProtocols(protocol.getProtocolDescriptor().getAnnounceProtocols());
-            }
-            availableProtocols.add(new Identify(identifyBuilder.build()));
-
-            HostBuilder b = new HostBuilder()
-                    .secureTransport(QuicTransport::Ecdsa)
-                    .protocol(availableProtocols.toArray(new ProtocolBinding[0]))
-                    .listen(listenAddrsArray);
-
-            node = b.build();
-        } else {
-            node = BuilderJKt.hostJ(Builder.Defaults.None, b -> {
-                b.getIdentity().setFactory(() -> privKey);
+            if (transport.equals(QUIC_V1)) {
+                b.getSecureTransports().add(p ->
+                    u ->
+                        QuicTransport.Ecdsa(
+                                privKey,
+                                (List<ProtocolBinding<?>>) p));
+            } else {
                 if (transport.equals("tcp")) {
                     b.getTransports().add(TcpTransport::new);
                 }
@@ -123,33 +102,31 @@ public class InteropTestClient {
                     muxers.add(StreamMuxerProtocol.getYamux());
                 }
                 b.getMuxers().addAll(muxers);
-
                 for (ProtocolBinding<?> protocol : protocols) {
                     b.getProtocols().add(protocol);
                 }
+            }
+            IdentifyOuterClass.Identify.Builder identifyBuilder = IdentifyOuterClass.Identify.newBuilder()
+                    .setProtocolVersion("ipfs/0.1.0")
+                    .setAgentVersion("nabu/v0.1.0")
+                    .setPublicKey(ByteArrayExtKt.toProtobuf(privKey.publicKey().bytes()))
+                    .addAllListenAddrs(listenAddrs.stream()
+                            .map(Multiaddr::fromString)
+                            .map(Multiaddr::serialize)
+                            .map(ByteArrayExtKt::toProtobuf)
+                            .collect(Collectors.toList()));
+            for (ProtocolBinding<?> protocol : protocols) {
+                identifyBuilder = identifyBuilder.addAllProtocols(protocol.getProtocolDescriptor().getAnnounceProtocols());
+            }
+            b.getProtocols().add(new Identify(identifyBuilder.build()));
 
-                IdentifyOuterClass.Identify.Builder identifyBuilder = IdentifyOuterClass.Identify.newBuilder()
-                        .setProtocolVersion("ipfs/0.1.0")
-                        .setAgentVersion("nabu/v0.1.0")
-                        .setPublicKey(ByteArrayExtKt.toProtobuf(privKey.publicKey().bytes()))
-                        .addAllListenAddrs(listenAddrs.stream()
-                                .map(Multiaddr::fromString)
-                                .map(Multiaddr::serialize)
-                                .map(ByteArrayExtKt::toProtobuf)
-                                .collect(Collectors.toList()));
-                for (ProtocolBinding<?> protocol : protocols) {
-                    identifyBuilder = identifyBuilder.addAllProtocols(protocol.getProtocolDescriptor().getAnnounceProtocols());
-                }
-                b.getProtocols().add(new Identify(identifyBuilder.build()));
-
-                for (String listenAddr : listenAddrs) {
-                    b.getNetwork().listen(listenAddr);
-                }
-                b.getConnectionHandlers().add(conn -> System.err.println(conn.localAddress() +
-                        " received connection from " + conn.remoteAddress() +
-                        " on transport " + conn.transport()));
-            });
-        }
+            for (String listenAddr : listenAddrs) {
+                b.getNetwork().listen(listenAddr);
+            }
+            b.getConnectionHandlers().add(conn -> System.err.println(conn.localAddress() +
+                    " received connection from " + conn.remoteAddress() +
+                    " on transport " + conn.transport()));
+        });
         node.start().join();
         Jedis jedis = new Jedis("http://" + redis_addr);
         boolean isReady = false;
