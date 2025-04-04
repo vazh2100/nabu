@@ -78,7 +78,7 @@ public class InteropTestClient {
         Multiaddr advertisedAddr = address.withP2P(peerId);
         List<String> listenAddrs = new ArrayList<>();
         listenAddrs.addAll(swarmAddresses.stream().map(MultiAddress::toString).collect(Collectors.toList()));
-        Host node = BuilderJKt.hostJ(Builder.Defaults.Standard, b -> {
+        Host node = BuilderJKt.hostJ(Builder.Defaults.None, b -> {
             b.getIdentity().setFactory(() -> privKey);
 
             if (transport.equals(QUIC_V1)) {
