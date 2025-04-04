@@ -66,7 +66,7 @@ public class InteropTestClient {
             throw new IllegalStateException("transport == null ||  muxer == null || security == null");
         }
         int port = 10000 + new Random().nextInt(50000);
-        boolean isTcp = transport != null && "tcp".equals(transport);
+        boolean isTcp = "tcp".equals(transport);
         Multiaddr address = Multiaddr.fromString("/ip4/" + ip + (isTcp ? "/tcp/" : "/udp/") + port + (isTcp ? "" : "/quic"));
         List<MultiAddress> swarmAddresses = List.of(new MultiAddress(address.toString()));
 
@@ -78,7 +78,7 @@ public class InteropTestClient {
         Multiaddr advertisedAddr = address.withP2P(peerId);
         List<String> listenAddrs = new ArrayList<>();
         listenAddrs.addAll(swarmAddresses.stream().map(MultiAddress::toString).collect(Collectors.toList()));
-        Host node = BuilderJKt.hostJ(Builder.Defaults.None, b -> {
+        Host node = BuilderJKt.hostJ(Builder.Defaults.Standard, b -> {
             b.getIdentity().setFactory(() -> privKey);
 
             if (transport.equals(QUIC_V1)) {
