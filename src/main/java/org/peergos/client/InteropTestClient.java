@@ -124,9 +124,9 @@ public class InteropTestClient {
             for (String listenAddr : listenAddrs) {
                 b.getNetwork().listen(listenAddr);
             }
-            b.getConnectionHandlers().add(conn -> System.err.println( //conn.localAddress() +
-                    " received connection from " + conn.remoteAddress() +
-                    " on transport " + conn.transport()));
+            //b.getConnectionHandlers().add(conn -> System.err.println( //conn.localAddress() +
+            //        " received connection from " + conn.remoteAddress() +
+            //        " on transport " + conn.transport()));
         });
         node.start().join();
         Jedis jedis = new Jedis("http://" + redis_addr);
