@@ -92,15 +92,15 @@ public class InteropTestClient {
                 System.err.println("DEBUGGING: TCP transport");
                 b.getTransports().add(TcpTransport::new);
             }
-            if (security != null && security.equals("noise")) {
+            if ("noise".equals(security)) {
                 b.getSecureChannels().add((k, m) -> new NoiseXXSecureChannel(k, m));
-            } else if (security == null || security.equals("tls")) {
+            } else if ("tls".equals(security)) {
                 b.getSecureChannels().add((k, m) -> new TlsSecureChannel(k, m, "ECDSA"));
             }
             List<StreamMuxerProtocol> muxers = new ArrayList<>();
-            if (muxer != null && muxer.equals("mplex")) {
+            if ("mplex".equals(muxer)) {
                 muxers.add(StreamMuxerProtocol.getMplex());
-            } else if (muxer == null || muxer.equals("yamux")) {
+            } else if ("yamux".equals(muxer)) {
                 muxers.add(StreamMuxerProtocol.getYamux());
             }
             b.getMuxers().addAll(muxers);
@@ -124,7 +124,7 @@ public class InteropTestClient {
             for (String listenAddr : listenAddrs) {
                 b.getNetwork().listen(listenAddr);
             }
-            b.getConnectionHandlers().add(conn -> System.err.println(conn.localAddress() +
+            b.getConnectionHandlers().add(conn -> System.err.println( //conn.localAddress() +
                     " received connection from " + conn.remoteAddress() +
                     " on transport " + conn.transport()));
         });
