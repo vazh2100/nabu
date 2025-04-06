@@ -146,7 +146,7 @@ public class InteropTestClient {
                 if (listenerAddrs == null || listenerAddrs.isEmpty()) {
                     throw new IllegalStateException("listenerAddr not set");
                 }
-                String listenerAddrStr = listenerAddrs.get(listenerAddrs.size() -1);
+                String listenerAddrStr = listenerAddrs.get(listenerAddrs.size() -1).replace("quic-v1", "quic");
                 Multiaddr listenerAddr = Multiaddr.fromString(listenerAddrStr);
                 System.err.println("Other peer multiaddr is: " + listenerAddr);
                 System.err.println("Sending ping messages to " + listenerAddr);
