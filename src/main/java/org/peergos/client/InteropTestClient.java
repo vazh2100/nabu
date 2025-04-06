@@ -67,7 +67,7 @@ public class InteropTestClient {
         }
         int port = 10000 + new Random().nextInt(50000);
         boolean isTcp = "tcp".equals(transport);
-        Multiaddr address = Multiaddr.fromString("/ip4/" + ip + (isTcp ? "/tcp/" : "/udp/") + port + (isTcp ? "" : "/quic"));
+        Multiaddr address = Multiaddr.fromString("/ip4/" + ip + (isTcp ? "/tcp/" : "/udp/") + port + (isTcp ? "" : "/quic-v1"));
         List<MultiAddress> swarmAddresses = List.of(new MultiAddress(address.toString()));
 
         List<ProtocolBinding> protocols = new ArrayList<>();
