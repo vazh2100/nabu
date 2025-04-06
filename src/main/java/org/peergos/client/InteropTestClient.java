@@ -3,6 +3,7 @@ package org.peergos.client;
 import identify.pb.IdentifyOuterClass;
 import io.libp2p.core.Host;
 import io.libp2p.core.PeerId;
+import io.libp2p.core.crypto.KeyType;
 import io.libp2p.core.crypto.PrivKey;
 import io.libp2p.core.dsl.Builder;
 import io.libp2p.core.dsl.BuilderJKt;
@@ -67,67 +68,68 @@ public class InteropTestClient {
         }
         int port = 10000 + new Random().nextInt(50000);
         boolean isTcp = "tcp".equals(transport);
-        Multiaddr address = Multiaddr.fromString("/ip4/" + ip + (isTcp ? "/tcp/" : "/udp/") + port + (isTcp ? "" : "/quic"));
+        Multiaddr address = Multiaddr.fromString("/ip4/" + ip + (isTcp ? "/tcp/" : "/udp/") + port + (isTcp ? "" : "/quic-v1"));
         List<MultiAddress> swarmAddresses = List.of(new MultiAddress(address.toString()));
-
-        List<ProtocolBinding> protocols = new ArrayList<>();
-        protocols.add(new Ping());
 
         PrivKey privKey = Ed25519Kt.generateEd25519KeyPair().getFirst();
         PeerId peerId = PeerId.fromPubKey(privKey.publicKey());
         Multiaddr advertisedAddr = address.withP2P(peerId);
         List<String> listenAddrs = new ArrayList<>();
         listenAddrs.addAll(swarmAddresses.stream().map(MultiAddress::toString).collect(Collectors.toList()));
-        Host node = BuilderJKt.hostJ(Builder.Defaults.None, b -> {
-            b.getIdentity().setFactory(() -> privKey);
 
-            if (transport.equals(QUIC_V1)) {
-                System.err.println("DEBUGGING: transport is quic-v1");
-                b.getSecureTransports().add(p ->
-                    u ->
-                        QuicTransport.Ecdsa(
-                                privKey,
-                                (List<ProtocolBinding<?>>) p));
-            } else {
+        IdentifyOuterClass.Identify.Builder identifyBuilder = IdentifyOuterClass.Identify.newBuilder()
+                .setProtocolVersion("ipfs/0.1.0")
+                .setAgentVersion("nabu/v0.1.0")
+                .setPublicKey(ByteArrayExtKt.toProtobuf(privKey.publicKey().bytes()))
+                .addAllListenAddrs(listenAddrs.stream()
+                        .map(Multiaddr::fromString)
+                        .map(Multiaddr::serialize)
+                        .map(ByteArrayExtKt::toProtobuf)
+                        .collect(Collectors.toList()));
+        List<ProtocolBinding> protocols = new ArrayList<>();
+        protocols.add(new Ping());
+        for (ProtocolBinding<?> protocol : protocols) {
+            identifyBuilder = identifyBuilder.addAllProtocols(protocol.getProtocolDescriptor().getAnnounceProtocols());
+        }
+        protocols.add(new Identify(identifyBuilder.build()));
+
+        Host node = null;
+        if (transport.equals(QUIC_V1)) {
+            System.err.println("DEBUGGING: transport is quic-v1");
+            node = new HostBuilder()
+                .keyType(KeyType.ED25519)
+                .secureTransport(QuicTransport::Ecdsa)
+                .protocol(protocols.toArray(new ProtocolBinding[0]))
+                .listen(listenAddrs.toArray(new String[0]))
+                .build();
+        } else {
+            node = BuilderJKt.hostJ(Builder.Defaults.None, b -> {
+                b.getIdentity().setFactory(() -> privKey);
                 System.err.println("DEBUGGING: TCP transport");
                 b.getTransports().add(TcpTransport::new);
-            }
-            if ("noise".equals(security)) {
-                b.getSecureChannels().add((k, m) -> new NoiseXXSecureChannel(k, m));
-            } else if ("tls".equals(security)) {
-                b.getSecureChannels().add((k, m) -> new TlsSecureChannel(k, m, "ECDSA"));
-            }
-            List<StreamMuxerProtocol> muxers = new ArrayList<>();
-            if ("mplex".equals(muxer)) {
-                muxers.add(StreamMuxerProtocol.getMplex());
-            } else if ("yamux".equals(muxer)) {
-                muxers.add(StreamMuxerProtocol.getYamux());
-            }
-            b.getMuxers().addAll(muxers);
-            for (ProtocolBinding<?> protocol : protocols) {
-                b.getProtocols().add(protocol);
-            }
-            IdentifyOuterClass.Identify.Builder identifyBuilder = IdentifyOuterClass.Identify.newBuilder()
-                    .setProtocolVersion("ipfs/0.1.0")
-                    .setAgentVersion("nabu/v0.1.0")
-                    .setPublicKey(ByteArrayExtKt.toProtobuf(privKey.publicKey().bytes()))
-                    .addAllListenAddrs(listenAddrs.stream()
-                            .map(Multiaddr::fromString)
-                            .map(Multiaddr::serialize)
-                            .map(ByteArrayExtKt::toProtobuf)
-                            .collect(Collectors.toList()));
-            for (ProtocolBinding<?> protocol : protocols) {
-                identifyBuilder = identifyBuilder.addAllProtocols(protocol.getProtocolDescriptor().getAnnounceProtocols());
-            }
-            b.getProtocols().add(new Identify(identifyBuilder.build()));
-
-            for (String listenAddr : listenAddrs) {
-                b.getNetwork().listen(listenAddr);
-            }
-            //b.getConnectionHandlers().add(conn -> System.err.println( //conn.localAddress() +
-            //        " received connection from " + conn.remoteAddress() +
-            //        " on transport " + conn.transport()));
-        });
+                if ("noise".equals(security)) {
+                    b.getSecureChannels().add((k, m) -> new NoiseXXSecureChannel(k, m));
+                } else if ("tls".equals(security)) {
+                    b.getSecureChannels().add((k, m) -> new TlsSecureChannel(k, m, "ECDSA"));
+                }
+                List<StreamMuxerProtocol> muxers = new ArrayList<>();
+                if ("mplex".equals(muxer)) {
+                    muxers.add(StreamMuxerProtocol.getMplex());
+                } else if ("yamux".equals(muxer)) {
+                    muxers.add(StreamMuxerProtocol.getYamux());
+                }
+                b.getMuxers().addAll(muxers);
+                for (ProtocolBinding<?> protocol : protocols) {
+                    b.getProtocols().add(protocol);
+                }
+                for (String listenAddr : listenAddrs) {
+                    b.getNetwork().listen(listenAddr);
+                }
+                //b.getConnectionHandlers().add(conn -> System.err.println( //conn.localAddress() +
+                //        " received connection from " + conn.remoteAddress() +
+                //        " on transport " + conn.transport()));
+            });
+        }
         node.start().join();
         Jedis jedis = new Jedis("http://" + redis_addr);
         boolean isReady = false;
@@ -146,7 +148,7 @@ public class InteropTestClient {
                 if (listenerAddrs == null || listenerAddrs.isEmpty()) {
                     throw new IllegalStateException("listenerAddr not set");
                 }
-                String listenerAddrStr = listenerAddrs.get(listenerAddrs.size() -1).replace("quic-v1", "quic");
+                String listenerAddrStr = listenerAddrs.get(listenerAddrs.size() -1);
                 Multiaddr listenerAddr = Multiaddr.fromString(listenerAddrStr);
                 System.err.println("Other peer multiaddr is: " + listenerAddr);
                 System.err.println("Sending ping messages to " + listenerAddr);
