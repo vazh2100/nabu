@@ -8,7 +8,6 @@ import io.libp2p.core.crypto.PrivKey;
 import io.libp2p.core.dsl.Builder;
 import io.libp2p.core.dsl.BuilderJKt;
 import io.libp2p.core.dsl.HostBuilder;
-import io.libp2p.core.dsl.SecureTransportsBuilder;
 import io.libp2p.core.multiformats.Multiaddr;
 import io.libp2p.core.multistream.ProtocolBinding;
 import io.libp2p.core.mux.StreamMuxerProtocol;
@@ -18,15 +17,11 @@ import io.libp2p.protocol.Identify;
 import io.libp2p.protocol.Ping;
 import io.libp2p.protocol.PingController;
 import io.libp2p.security.noise.NoiseXXSecureChannel;
-import io.libp2p.security.tls.TlsSecureChannel;
-import io.libp2p.transport.quic.QuicTransport;
 import io.libp2p.transport.tcp.TcpTransport;
 import io.ipfs.multiaddr.MultiAddress;
 import redis.clients.jedis.Jedis;
 
-import java.io.IOException;
 import java.net.*;
-import java.security.Security;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -98,7 +93,7 @@ public class InteropTestClient {
             System.err.println("DEBUGGING: transport is quic-v1");
             node = new HostBuilder()
                 .keyType(KeyType.ED25519)
-                .secureTransport(QuicTransport::Ecdsa)
+                //.secureTransport(QuicTransport::Ecdsa)
                 .protocol(protocols.toArray(new ProtocolBinding[0]))
                 .listen(listenAddrs.toArray(new String[0]))
                 .build();
@@ -110,7 +105,7 @@ public class InteropTestClient {
                 if ("noise".equals(security)) {
                     b.getSecureChannels().add((k, m) -> new NoiseXXSecureChannel(k, m));
                 } else if ("tls".equals(security)) {
-                    b.getSecureChannels().add((k, m) -> new TlsSecureChannel(k, m, "ECDSA"));
+                    //b.getSecureChannels().add((k, m) -> new TlsSecureChannel(k, m, "ECDSA"));
                 }
                 List<StreamMuxerProtocol> muxers = new ArrayList<>();
                 if ("mplex".equals(muxer)) {
