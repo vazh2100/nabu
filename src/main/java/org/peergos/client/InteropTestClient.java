@@ -17,6 +17,7 @@ import io.libp2p.protocol.Identify;
 import io.libp2p.protocol.Ping;
 import io.libp2p.protocol.PingController;
 import io.libp2p.security.noise.NoiseXXSecureChannel;
+import io.libp2p.transport.quic.QuicTransport;
 import io.libp2p.transport.tcp.TcpTransport;
 import io.ipfs.multiaddr.MultiAddress;
 import redis.clients.jedis.Jedis;
@@ -93,7 +94,7 @@ public class InteropTestClient {
             System.err.println("DEBUGGING: transport is quic-v1");
             node = new HostBuilder()
                 .keyType(KeyType.ED25519)
-                //.secureTransport(QuicTransport::Ecdsa)
+                .secureTransport(QuicTransport::Ecdsa)
                 .protocol(protocols.toArray(new ProtocolBinding[0]))
                 .listen(listenAddrs.toArray(new String[0]))
                 .build();
