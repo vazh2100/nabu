@@ -89,43 +89,38 @@ public class InteropTestClient {
         }
         protocols.add(new Identify(identifyBuilder.build()));
 
-        Host node = null;
-        if (transport.equals(QUIC_V1)) {
-            System.err.println("DEBUGGING: transport is quic-v1");
-            node = new HostBuilder()
-                .keyType(KeyType.ED25519)
-                .secureTransport(QuicTransport::Ecdsa)
-                .protocol(protocols.toArray(new ProtocolBinding[0]))
-                .listen(listenAddrs.toArray(new String[0]))
-                .build();
-        } else {
-            node = BuilderJKt.hostJ(Builder.Defaults.None, b -> {
-                b.getIdentity().setFactory(() -> privKey);
+        Host node = BuilderJKt.hostJ(Builder.Defaults.None, b -> {
+            b.getIdentity().setFactory(() -> privKey);
+
+            if (transport.equals(QUIC_V1)) {
+                System.err.println("DEBUGGING: transport is quic-v1");
+                b.getSecureTransports().add(QuicTransport::Ecdsa);
+            } else {
                 System.err.println("DEBUGGING: TCP transport");
                 b.getTransports().add(TcpTransport::new);
-                if ("noise".equals(security)) {
-                    b.getSecureChannels().add((k, m) -> new NoiseXXSecureChannel(k, m));
-                } else if ("tls".equals(security)) {
-                    //b.getSecureChannels().add((k, m) -> new TlsSecureChannel(k, m, "ECDSA"));
-                }
-                List<StreamMuxerProtocol> muxers = new ArrayList<>();
-                if ("mplex".equals(muxer)) {
-                    muxers.add(StreamMuxerProtocol.getMplex());
-                } else if ("yamux".equals(muxer)) {
-                    muxers.add(StreamMuxerProtocol.getYamux());
-                }
-                b.getMuxers().addAll(muxers);
-                for (ProtocolBinding<?> protocol : protocols) {
-                    b.getProtocols().add(protocol);
-                }
-                for (String listenAddr : listenAddrs) {
-                    b.getNetwork().listen(listenAddr);
-                }
-                //b.getConnectionHandlers().add(conn -> System.err.println( //conn.localAddress() +
-                //        " received connection from " + conn.remoteAddress() +
-                //        " on transport " + conn.transport()));
-            });
-        }
+            }
+            if ("noise".equals(security)) {
+                b.getSecureChannels().add((k, m) -> new NoiseXXSecureChannel(k, m));
+            } else if ("tls".equals(security)) {
+                //b.getSecureChannels().add((k, m) -> new TlsSecureChannel(k, m, "ECDSA"));
+            }
+            List<StreamMuxerProtocol> muxers = new ArrayList<>();
+            if ("mplex".equals(muxer)) {
+                muxers.add(StreamMuxerProtocol.getMplex());
+            } else if ("yamux".equals(muxer)) {
+                muxers.add(StreamMuxerProtocol.getYamux());
+            }
+            b.getMuxers().addAll(muxers);
+            for (ProtocolBinding<?> protocol : protocols) {
+                b.getProtocols().add(protocol);
+            }
+            for (String listenAddr : listenAddrs) {
+                b.getNetwork().listen(listenAddr);
+            }
+            //b.getConnectionHandlers().add(conn -> System.err.println( //conn.localAddress() +
+            //        " received connection from " + conn.remoteAddress() +
+            //        " on transport " + conn.transport()));
+        });
         node.start().join();
         Jedis jedis = new Jedis("http://" + redis_addr);
         boolean isReady = false;
