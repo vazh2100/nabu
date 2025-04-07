@@ -17,6 +17,7 @@ import io.libp2p.protocol.Identify;
 import io.libp2p.protocol.Ping;
 import io.libp2p.protocol.PingController;
 import io.libp2p.security.noise.NoiseXXSecureChannel;
+import io.libp2p.security.tls.TlsSecureChannel;
 import io.libp2p.transport.quic.QuicTransport;
 import io.libp2p.transport.tcp.TcpTransport;
 import io.ipfs.multiaddr.MultiAddress;
@@ -102,7 +103,7 @@ public class InteropTestClient {
             if ("noise".equals(security)) {
                 b.getSecureChannels().add((k, m) -> new NoiseXXSecureChannel(k, m));
             } else if ("tls".equals(security)) {
-                //b.getSecureChannels().add((k, m) -> new TlsSecureChannel(k, m, "ECDSA"));
+                b.getSecureChannels().add((k, m) -> new TlsSecureChannel(k, m, "ECDSA"));
             }
             List<StreamMuxerProtocol> muxers = new ArrayList<>();
             if ("mplex".equals(muxer)) {
