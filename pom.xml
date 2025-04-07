@@ -6,7 +6,7 @@
 
     <groupId>com.github.peergos</groupId>
     <artifactId>nabu</artifactId>
-    <version>v0.9.3</version>
+    <version>v0.9.4</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -109,7 +109,7 @@
         <dependency>
             <groupId>com.github.peergos</groupId>
             <artifactId>jvm-libp2p</artifactId>
-            <version>0.19.4-quic</version>
+            <version>0.19.5-quic</version>
         </dependency>
         <dependency>
             <groupId>io.netty.incubator</groupId>
