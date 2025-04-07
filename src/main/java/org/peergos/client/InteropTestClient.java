@@ -168,6 +168,8 @@ public class InteropTestClient {
     }
     public static void main(String[] args) {
         try {
+            System.err.println("DEBUGGING: javax.net.debug set ssl:handshake");
+            System.setProperty("javax.net.debug", "ssl:handshake");
             String transport = System.getenv("transport"); //"tcp"
             String muxer = System.getenv("muxer"); //"mplex", "yamux"
             String security = System.getenv("security"); //"tls", "noise"
