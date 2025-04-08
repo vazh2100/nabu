@@ -3,11 +3,9 @@ package org.peergos.client;
 import identify.pb.IdentifyOuterClass;
 import io.libp2p.core.Host;
 import io.libp2p.core.PeerId;
-import io.libp2p.core.crypto.KeyType;
 import io.libp2p.core.crypto.PrivKey;
 import io.libp2p.core.dsl.Builder;
 import io.libp2p.core.dsl.BuilderJKt;
-import io.libp2p.core.dsl.HostBuilder;
 import io.libp2p.core.multiformats.Multiaddr;
 import io.libp2p.core.multistream.ProtocolBinding;
 import io.libp2p.core.mux.StreamMuxerProtocol;
@@ -118,9 +116,9 @@ public class InteropTestClient {
             for (String listenAddr : listenAddrs) {
                 b.getNetwork().listen(listenAddr);
             }
-            //b.getConnectionHandlers().add(conn -> System.err.println( //conn.localAddress() +
-            //        " received connection from " + conn.remoteAddress() +
-            //        " on transport " + conn.transport()));
+            b.getConnectionHandlers().add(conn -> System.err.println( conn.localAddress() +
+                    " received connection from " + conn.remoteAddress() +
+                    " on transport " + conn.transport()));
         });
         node.start().join();
         Jedis jedis = new Jedis("http://" + redis_addr);
