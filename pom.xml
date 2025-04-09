@@ -6,7 +6,7 @@
 
     <groupId>com.github.peergos</groupId>
     <artifactId>nabu</artifactId>
-    <version>v0.9.9</version>
+    <version>v0.9.10</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -109,7 +109,7 @@
         <dependency>
             <groupId>com.github.peergos</groupId>
             <artifactId>jvm-libp2p</artifactId>
-            <version>0.19.11-quic</version>
+            <version>0.19.12-quic</version>
         </dependency>
 
         <dependency>
