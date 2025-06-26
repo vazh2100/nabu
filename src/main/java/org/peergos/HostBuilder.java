@@ -18,14 +18,18 @@ import io.libp2p.security.tls.*;
 import io.libp2p.transport.quic.QuicTransport;
 import io.libp2p.transport.tcp.*;
 import io.libp2p.core.crypto.KeyKt;
+import io.netty.handler.logging.LogLevel;
 import org.peergos.blockstore.*;
 import org.peergos.protocol.autonat.*;
 import org.peergos.protocol.bitswap.*;
 import org.peergos.protocol.circuit.*;
 import org.peergos.protocol.dht.*;
+import org.peergos.util.Logging;
+
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
+import java.util.logging.Logger;
 import java.util.stream.*;
 
 public class HostBuilder {
@@ -34,6 +38,8 @@ public class HostBuilder {
     private List<String> listenAddrs = new ArrayList<>();
     private List<ProtocolBinding> protocols = new ArrayList<>();
     private List<StreamMuxerProtocol> muxers = new ArrayList<>();
+
+    private static final Logger LOG = Logging.LOG();
 
     public HostBuilder() {
     }
@@ -168,8 +174,7 @@ public class HostBuilder {
             RamAddressBook addrs = new RamAddressBook();
             b.getAddressBook().setImpl(addrs);
             // Uncomment to add mux debug logging
-//            b.getDebug().getMuxFramesHandler().addLogger(LogLevel.INFO, "MUX");
-
+            b.getDebug().getMuxFramesHandler().addLogger(LogLevel.INFO, "MUX");
             for (ProtocolBinding<?> protocol : protocols) {
                 b.getProtocols().add(protocol);
                 if (protocol instanceof AddressBookConsumer)
@@ -185,6 +190,8 @@ public class HostBuilder {
             // Send an identify req on all new incoming connections
             b.getConnectionHandlers().add(connection -> {
                 PeerId remotePeer = connection.secureSession().getRemoteId();
+                LOG.info("HostBuilder.build: new incoming connection " + remotePeer.toBase58());
+
                 Multiaddr remote = connection.remoteAddress().withP2P(remotePeer);
                 addrs.addAddrs(remotePeer, 0, remote);
                 if (connection.isInitiator())
@@ -219,9 +226,8 @@ public class HostBuilder {
                 b.getNetwork().listen(listenAddr);
             }
 
-//            b.getConnectionHandlers().add(conn -> System.out.println(conn.localAddress() +
-//                    " received connection from " + conn.remoteAddress() +
-//                    " on transport " + conn.transport()));
+            b.getConnectionHandlers().add(conn -> System.out.println(conn.localAddress() +
+                    " received connection from " + conn.remoteAddress() + " on transport " + conn.transport()));
         });
         for (ProtocolBinding protocol : protocols) {
             if (protocol instanceof HostConsumer)

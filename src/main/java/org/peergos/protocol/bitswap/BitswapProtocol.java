@@ -43,6 +43,8 @@ public class BitswapProtocol extends ProtobufProtocolHandler<BitswapController> 
     @NotNull
     @Override
     protected CompletableFuture<BitswapController> onStartInitiator(@NotNull Stream stream) {
+        LOG.info("BitswapProtocol.onStartInitiator - " + stream.getConnection().remoteAddress());
+
         BitswapConnection conn = new BitswapConnection(stream, initiatorSentBytes);
         engine.addConnection(stream.remotePeerId(), stream.getConnection().remoteAddress());
         stream.pushHandler(new MessageHandler(engine, initiatorSentBytes, initiatorReceivedBytes));
@@ -52,11 +54,14 @@ public class BitswapProtocol extends ProtobufProtocolHandler<BitswapController> 
     @NotNull
     @Override
     protected CompletableFuture<BitswapController> onStartResponder(@NotNull Stream stream) {
+        LOG.info("BitswapProtocol.onStartResponder - " + stream.getConnection().remoteAddress());
         if (! engine.allowConnection(stream.remotePeerId())) {
             stream.close();
             blockedConnections.inc();
             return new CompletableFuture<>();
         }
+
+        LOG.info("BitswapProtocol.onStartResponder if allowConnection  - " + stream.getConnection().remoteAddress());
         BitswapConnection conn = new BitswapConnection(stream, responderSentBytes);
         engine.addConnection(stream.remotePeerId(), stream.getConnection().remoteAddress());
         stream.pushHandler(new MessageHandler(engine, responderSentBytes, responderReceivedBytes));

@@ -5,9 +5,11 @@ import io.libp2p.core.*;
 import io.libp2p.core.Stream;
 import org.peergos.protocol.bitswap.*;
 import org.peergos.protocol.dht.*;
+import org.peergos.util.Logging;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.logging.Logger;
 import java.util.stream.*;
 
 public class BitswapBlockService implements BlockService {
@@ -15,6 +17,7 @@ public class BitswapBlockService implements BlockService {
     private final Host us;
     private final Bitswap bitswap;
     private final Kademlia dht;
+    private static final Logger LOG = Logging.LOG();
 
     public BitswapBlockService(Host us, Bitswap bitswap, Kademlia dht) {
         this.us = us;
@@ -27,6 +30,14 @@ public class BitswapBlockService implements BlockService {
         if (peers.isEmpty()) {
             // if peers are not provided try connected peers and then fallback to finding peers from DHT
             Set<PeerId> connected = bitswap.getBroadcastAudience();
+            LOG.info("BitswapBlockService.get - Connected Peers Count - " + connected.size());
+
+            if(!connected.isEmpty()) {
+                connected.forEach(peer -> {
+                    LOG.info("BitswapBlockService.get - Connected Peer - " + peer.toBase58());
+                });
+            }
+
             Set<HashedBlock> fromConnected = bitswap.get(hashes, us, connected, addToBlockstore)
                     .stream()
                     .flatMap(f -> {
@@ -37,6 +48,9 @@ public class BitswapBlockService implements BlockService {
                         }
                     })
                     .collect(Collectors.toSet());
+
+            LOG.info("BitswapBlockService.get - fromConnected Size - " +  fromConnected.size() + " hashes size -- " + hashes.size() );
+
             if (fromConnected.size() == hashes.size())
                 return new ArrayList<>(fromConnected);
 

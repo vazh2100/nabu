@@ -261,5 +261,10 @@
             <artifactId>simpleclient_httpserver</artifactId>
             <version>0.16.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java-util</artifactId>
+            <version>3.25.5</version>
+        </dependency>
     </dependencies>
 </project>

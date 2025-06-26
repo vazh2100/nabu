@@ -137,18 +137,31 @@ public class Bitswap extends StrictProtocolBinding<BitswapController> implements
         engine.buildAndSendMessages(wantsProto, Collections.emptyList(), Collections.emptyList(),
                 msg -> audience.forEach(peer -> {
                     try {
+                        LOG.info("START DEAL PEER WITH - " + peer.toBase58());
                         dialPeer(us, peer, c -> {
+                            LOG.info("Send Message with wants to - " + peer.toBase58());
                             c.send(msg);
                         });
                     } catch (Exception e) {}
                 }));
     }
 
+    public void sendMessage(Host us, PeerId peer, MessageOuterClass.Message message) {
+        LOG.info("START sendMessage to - " + peer.toBase58());
+        dialPeer(us, peer, c -> {
+            LOG.info("Send Message with wants to - " + peer.toBase58());
+            c.send(message);
+        });
+    }
+
     private void dialPeer(Host us, PeerId peer, Consumer<BitswapController> action) {
         Multiaddr[] addr = addrs.get(peer).join().toArray(new Multiaddr[0]);
         if (addr.length == 0)
             throw new IllegalStateException("No addresses known for peer " + peer);
+        LOG.info("START dial to - " + peer.toBase58());
         BitswapController controller = dial(us, peer, addr).getController().join();
+
+        LOG.info("END dial to - " + peer.toBase58());
         action.accept(controller);
     }
 
