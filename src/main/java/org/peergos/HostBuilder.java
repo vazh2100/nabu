@@ -153,7 +153,7 @@ public class HostBuilder {
 
     public Host build() {
         if (muxers.isEmpty())
-            muxers.addAll(List.of(StreamMuxerProtocol.getYamux(), StreamMuxerProtocol.getMplex()));
+            muxers.addAll(List.of(StreamMuxerProtocol.Companion.getYamux(), StreamMuxerProtocol.Companion.getMplex()));
         return build(privKey, listenAddrs, protocols, muxers);
     }
 
