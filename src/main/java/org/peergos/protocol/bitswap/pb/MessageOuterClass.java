@@ -3084,7 +3084,7 @@ public final class MessageOuterClass {
       }
       private BlockPresence() {
         cid_ = com.google.protobuf.ByteString.EMPTY;
-        type_ = BlockPresenceType.Have.value;
+        type_ = 0;
         auth_ = com.google.protobuf.ByteString.EMPTY;
       }
 
