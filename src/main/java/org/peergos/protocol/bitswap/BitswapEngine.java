@@ -202,7 +202,7 @@ public class BitswapEngine {
                     }
                     if (recent.containsKey(w)) {
                         LOG.info("BITSWAP" + w.cid + "in recently sent blocks. Don't resend");
-                        continue; // don't re-send this block as we recently sent it to this peer
+//                        continue; // don't re-send this block as we recently sent it to this peer
                     }
                     boolean blockPresent = store.has(c).join();
                     if (!blockPresent)
