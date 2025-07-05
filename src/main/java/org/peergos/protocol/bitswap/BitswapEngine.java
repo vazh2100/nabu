@@ -1,6 +1,7 @@
 package org.peergos.protocol.bitswap;
 
 import com.google.protobuf.ByteString;
+import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import io.ipfs.cid.Cid;
@@ -9,6 +10,8 @@ import io.libp2p.core.AddressBook;
 import io.libp2p.core.PeerId;
 import io.libp2p.core.Stream;
 import io.libp2p.core.multiformats.Multiaddr;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.prometheus.client.Counter;
 import org.peergos.BlockRequestAuthoriser;
 import org.peergos.Hash;
@@ -364,6 +367,37 @@ public class BitswapEngine {
                         throw new RuntimeException(e);
                     }
 
+                    ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+// 1. Сериализуем message в байты
+                    byte[] messageBytes = reply.toByteArray();
+                    int size = messageBytes.length;
+
+// 2. Кодируем длину как varint (префикс)
+                    CodedOutputStream codedOut = CodedOutputStream.newInstance(out);
+                    try {
+                        codedOut.writeUInt32NoTag(size);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    try {
+                        codedOut.flush();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+
+// 3. Пишем сам message
+                    try {
+                        out.write(messageBytes);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+
+// 4. Отправляем в stream (например, ByteBuf / Netty)
+                    byte[] delimitedBytes = out.toByteArray();
+                    ByteBuf buf = Unpooled.wrappedBuffer(delimitedBytes);
+                    source.writeAndFlush(buf);
+
 //                    ByteArrayOutputStream out = new ByteArrayOutputStream();
 //                    try {
 //                        reply.writeDelimitedTo(out);
@@ -375,11 +409,11 @@ public class BitswapEngine {
 //                    sentBytes.inc(bytes.length);
 //
 //                    ByteBuf buf = Unpooled.wrappedBuffer(bytes);
-                    sentBytes.inc(reply.getSerializedSize());
+//                    sentBytes.inc(reply.getSerializedSize());
 //                    source.writeAndFlush(reply); //  не работает
-                    source.close().join();
-                    Multiaddr addr =  source.getConnection().remoteAddress().withP2P(source.remotePeerId());
-                    beHandler.execute(reply, addr);
+//                    source.close().join();
+//                    Multiaddr addr =  source.getConnection().remoteAddress().withP2P(source.remotePeerId());
+//                    beHandler.execute(reply, addr);
                 }
         );
     }
