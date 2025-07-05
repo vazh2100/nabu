@@ -10,8 +10,11 @@ import io.libp2p.core.AddressBook;
 import io.libp2p.core.PeerId;
 import io.libp2p.core.Stream;
 import io.libp2p.core.multiformats.Multiaddr;
+import io.libp2p.transport.implementation.StreamOverNetty;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelPipeline;
 import io.prometheus.client.Counter;
 import org.peergos.BlockRequestAuthoriser;
 import org.peergos.Hash;
@@ -162,6 +165,10 @@ public class BitswapEngine {
     public void receiveMessage(MessageOuterClass.Message msg, Stream source, Counter sentBytes) {
         System.out.println("Stream runtime class: " + source.getClass().getName());
         System.out.println("Stream runtime class: " + source);
+        ChannelPipeline pipeline = ((StreamOverNetty) source).getNettyChannel().pipeline();
+        for (Map.Entry<String, ChannelHandler> entry : pipeline) {
+            System.out.println("Handler name: " + entry.getKey() + ", class: " + entry.getValue().getClass().getName());
+        }
 
         String peerId = source.remotePeerId().toBase58();
 
