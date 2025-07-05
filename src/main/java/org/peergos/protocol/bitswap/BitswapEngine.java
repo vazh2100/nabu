@@ -381,10 +381,6 @@ public class BitswapEngine {
                     beHandler.execute(reply, addr);
                 }
         );
-
-        source.close().join();
-
-        source.closeWrite();
     }
 
     public void buildAndSendMessages(List<MessageOuterClass.Message.Wantlist.Entry> wants,
