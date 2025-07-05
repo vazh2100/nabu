@@ -1,26 +1,36 @@
 package org.peergos.protocol.bitswap;
 
-import com.google.protobuf.*;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
-import io.ipfs.cid.*;
+import io.ipfs.cid.Cid;
 import io.ipfs.multihash.Multihash;
-import io.libp2p.core.*;
+import io.libp2p.core.AddressBook;
+import io.libp2p.core.PeerId;
 import io.libp2p.core.Stream;
-import io.libp2p.core.multiformats.*;
+import io.libp2p.core.multiformats.Multiaddr;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.prometheus.client.*;
-import org.peergos.*;
-import org.peergos.blockstore.*;
-import org.peergos.protocol.bitswap.pb.*;
-import org.peergos.util.*;
+import io.prometheus.client.Counter;
+import org.peergos.BlockRequestAuthoriser;
+import org.peergos.Hash;
+import org.peergos.HashedBlock;
+import org.peergos.Want;
+import org.peergos.blockstore.Blockstore;
+import org.peergos.protocol.bitswap.pb.MessageOuterClass;
+import org.peergos.util.ArrayOps;
+import org.peergos.util.LRUCache;
+import org.peergos.util.Logging;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.*;
-import java.util.function.*;
-import java.util.logging.*;
-import java.util.stream.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class BitswapEngine {
     private static final Logger LOG = Logging.LOG();
@@ -361,6 +371,7 @@ public class BitswapEngine {
 
             ByteBuf buf = Unpooled.wrappedBuffer(bytes);
             source.writeAndFlush(buf);
+            source.closeWrite();
         });
     }
 
