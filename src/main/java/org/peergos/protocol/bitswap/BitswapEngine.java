@@ -9,8 +9,6 @@ import io.libp2p.core.AddressBook;
 import io.libp2p.core.PeerId;
 import io.libp2p.core.Stream;
 import io.libp2p.core.multiformats.Multiaddr;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.prometheus.client.Counter;
 import org.peergos.BlockRequestAuthoriser;
 import org.peergos.Hash;
@@ -352,27 +350,29 @@ public class BitswapEngine {
         }
 
         buildAndSendMessages(Collections.emptyList(), presences, blocks, reply -> {
-            try {
-                String json = JsonFormat.printer().print(reply);
-                LOG.info("BITSWAP reply to be sent: " + json);
-            } catch (InvalidProtocolBufferException e) {
-                throw new RuntimeException(e);
-            }
+                    try {
+                        String json = JsonFormat.printer().print(reply);
+                        LOG.info("BITSWAP reply to be sent: " + json);
+                    } catch (InvalidProtocolBufferException e) {
+                        throw new RuntimeException(e);
+                    }
 
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            try {
-                reply.writeDelimitedTo(out);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+//                    ByteArrayOutputStream out = new ByteArrayOutputStream();
+//                    try {
+//                        reply.writeDelimitedTo(out);
+//                    } catch (IOException e) {
+//                        throw new RuntimeException(e);
+//                    }
 
-            byte[] bytes = out.toByteArray();
-            sentBytes.inc(bytes.length);
-
-            ByteBuf buf = Unpooled.wrappedBuffer(bytes);
-            source.writeAndFlush(buf);
-            source.closeWrite();
-        });
+//                    byte[] bytes = out.toByteArray();
+//                    sentBytes.inc(bytes.length);
+//
+//                    ByteBuf buf = Unpooled.wrappedBuffer(bytes);
+                    sentBytes.inc(reply.getSerializedSize());
+                    source.writeAndFlush(reply);
+                }
+        );
+        source.closeWrite();
     }
 
     public void buildAndSendMessages(List<MessageOuterClass.Message.Wantlist.Entry> wants,
