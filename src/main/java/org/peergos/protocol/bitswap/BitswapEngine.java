@@ -340,6 +340,13 @@ public class BitswapEngine {
         }
 
         buildAndSendMessages(Collections.emptyList(), presences, blocks, reply -> {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            try {
+                reply.writeDelimitedTo(out);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            source.writeAndFlush(out.toByteArray());
             sentBytes.inc(reply.getSerializedSize());
             try {
                 String json2 = JsonFormat.printer().print(reply);
