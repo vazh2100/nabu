@@ -152,6 +152,8 @@ public class BitswapEngine {
     }
 
     public void receiveMessage(MessageOuterClass.Message msg, Stream source, Counter sentBytes) {
+        System.out.println("Stream runtime class: " + source.getClass().getName());
+        System.out.println("Stream runtime class: " + source);
 
         String peerId = source.remotePeerId().toBase58();
 
