@@ -373,54 +373,7 @@ public class BitswapEngine {
                     } catch (InvalidProtocolBufferException e) {
                         throw new RuntimeException(e);
                     }
-
-                    ByteArrayOutputStream out = new ByteArrayOutputStream();
-
-// 1. Сериализуем message в байты
-                    byte[] messageBytes = reply.toByteArray();
-                    int size = messageBytes.length;
-
-// 2. Кодируем длину как varint (префикс)
-                    CodedOutputStream codedOut = CodedOutputStream.newInstance(out);
-                    try {
-                        codedOut.writeUInt32NoTag(size);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                    try {
-                        codedOut.flush();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-
-// 3. Пишем сам message
-                    try {
-                        out.write(messageBytes);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-
-// 4. Отправляем в stream (например, ByteBuf / Netty)
-                    byte[] delimitedBytes = out.toByteArray();
-                    ByteBuf buf = Unpooled.wrappedBuffer(delimitedBytes);
-                    source.writeAndFlush(buf);
-
-//                    ByteArrayOutputStream out = new ByteArrayOutputStream();
-//                    try {
-//                        reply.writeDelimitedTo(out);
-//                    } catch (IOException e) {
-//                        throw new RuntimeException(e);
-//                    }
-
-//                    byte[] bytes = out.toByteArray();
-//                    sentBytes.inc(bytes.length);
-//
-//                    ByteBuf buf = Unpooled.wrappedBuffer(bytes);
-//                    sentBytes.inc(reply.getSerializedSize());
-//                    source.writeAndFlush(reply); //  не работает
-//                    source.close().join();
-//                    Multiaddr addr =  source.getConnection().remoteAddress().withP2P(source.remotePeerId());
-//                    beHandler.execute(reply, addr);
+                    source.writeAndFlush(reply);
                 }
         );
     }
