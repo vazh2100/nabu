@@ -1,6 +1,7 @@
 package org.peergos.protocol.bitswap;
 
 import com.google.protobuf.*;
+import com.google.protobuf.util.JsonFormat;
 import io.ipfs.cid.*;
 import io.ipfs.multihash.Multihash;
 import io.libp2p.core.*;
@@ -13,7 +14,6 @@ import org.peergos.protocol.bitswap.pb.*;
 import org.peergos.util.*;
 
 import java.io.*;
-import java.nio.charset.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.*;
@@ -30,7 +30,7 @@ public class BitswapEngine {
     private final ConcurrentHashMap<Want, PeerId> blockHaves = new ConcurrentHashMap<>();
     private final Map<Want, Boolean> deniedWants = Collections.synchronizedMap(new LRUCache<>(10_000));
     private final Map<PeerId, Map<Want, Boolean>> recentBlocksSent = Collections.synchronizedMap(new LRUCache<>(100));
-    private final Map<PeerId, Map<Want, Long>> recentWantsSent = Collections.synchronizedMap(new org.peergos.util.LRUCache<>(100));
+    private final Map<PeerId, Map<Want, Long>> recentWantsSent = Collections.synchronizedMap(new LRUCache<>(100));
     private final Map<PeerId, Boolean> blockedPeers = Collections.synchronizedMap(new LRUCache<>(1_000));
     private final boolean blockAggressivePeers;
     private final Set<PeerId> connections = new HashSet<>();
@@ -54,7 +54,7 @@ public class BitswapEngine {
     }
 
     public boolean allowConnection(PeerId peer) {
-        return ! blockAggressivePeers || ! blockedPeers.containsKey(peer);
+        return !blockAggressivePeers || !blockedPeers.containsKey(peer);
     }
 
     public void setAddressBook(AddressBook addrs) {
@@ -77,7 +77,7 @@ public class BitswapEngine {
     }
 
     public boolean hasWants() {
-        return ! localWants.isEmpty();
+        return !localWants.isEmpty();
     }
 
     public Set<PeerId> getConnected() {
@@ -114,9 +114,9 @@ public class BitswapEngine {
             long now = System.currentTimeMillis();
             long minResendWait = 5_000;
             Set<Want> res = localWants.entrySet().stream()
-                    .filter(e -> e.getValue().creationTime > now - 5*60*1000)
+                    .filter(e -> e.getValue().creationTime > now - 5 * 60 * 1000)
                     .map(e -> e.getKey())
-                    .filter(w -> ! recent.containsKey(w) || recent.get(w) < now - minResendWait)
+                    .filter(w -> !recent.containsKey(w) || recent.get(w) < now - minResendWait)
                     .collect(Collectors.toSet());
             res.forEach(w -> recent.put(w, now));
             return res;
@@ -134,7 +134,7 @@ public class BitswapEngine {
             Cid.putUvarint(res, c.version);
             Cid.putUvarint(res, c.codec.type);
             Cid.putUvarint(res, c.getType().index);
-            Cid.putUvarint(res, c.getType().length);;
+            Cid.putUvarint(res, c.getType().length);
             return res.toByteArray();
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -142,6 +142,17 @@ public class BitswapEngine {
     }
 
     public void receiveMessage(MessageOuterClass.Message msg, Stream source, Counter sentBytes) {
+
+        String peerId = source.remotePeerId().toBase58();
+
+        LOG.info("BITSWAP " + "received message from " + peerId);
+        try {
+            String json = JsonFormat.printer().print(msg);
+            LOG.info("BITSWAP json:\n" + json);
+        } catch (InvalidProtocolBufferException e) {
+            throw new RuntimeException(e);
+        }
+
 
         List<MessageOuterClass.Message.BlockPresence> presences = new ArrayList<>();
         List<MessageOuterClass.Message.Block> blocks = new ArrayList<>();
@@ -157,11 +168,13 @@ public class BitswapEngine {
         int absentBlocks = 0;
         int presentBlocks = 0;
         if (msg.hasWantlist()) {
+            LOG.info("BITSWAP " + "message has list of wants");
             for (MessageOuterClass.Message.Wantlist.Entry e : msg.getWantlist().getEntriesList()) {
                 Cid c;
                 try {
                     c = Cid.cast(e.getBlock().toByteArray());
                 } catch (Exception ex) {
+                    LOG.info("BITSWAP " + "unable to cast " + e);
                     continue;
                 }
                 Optional<String> auth = e.getAuth().isEmpty() ? Optional.empty() : Optional.of(ArrayOps.bytesToHex(e.getAuth().toByteArray()));
@@ -169,9 +182,16 @@ public class BitswapEngine {
                 boolean sendDontHave = e.getSendDontHave();
                 boolean wantBlock = e.getWantType().getNumber() == 0;
                 Want w = new Want(c, auth);
+                LOG.info("BITSWAP want cid: " + w.cid);
+                LOG.info("BITSWAP getWantType: " + e.getWantType() + " - " + e.getWantType().getNumber());
+                LOG.info("BITSWAP sendDontHave: " + e.getSendDontHave());
+                LOG.info("BITSWAP isCancel = " + e.getCancel());
+
                 if (wantBlock) {
+                    LOG.info("BITSWAP " + "message has BLOCK want type");
                     boolean denied = deniedWants.containsKey(w);
                     if (denied) {
+                        LOG.info("BITSWAP " + w.cid + " was denied");
                         MessageOuterClass.Message.BlockPresence presence = MessageOuterClass.Message.BlockPresence.newBuilder()
                                 .setCid(ByteString.copyFrom(c.toBytes()))
                                 .setType(MessageOuterClass.Message.BlockPresenceType.DontHave)
@@ -180,14 +200,17 @@ public class BitswapEngine {
                         messageSize += presence.getSerializedSize();
                         continue;
                     }
-                    if (recent.containsKey(w))
+                    if (recent.containsKey(w)) {
+                        LOG.info("BITSWAP" + w.cid + "in recently sent blocks. Don't resend");
                         continue; // don't re-send this block as we recently sent it to this peer
+                    }
                     boolean blockPresent = store.has(c).join();
-                    if (! blockPresent)
+                    if (!blockPresent)
                         absentBlocks++;
                     else
                         presentBlocks++;
                     if (blockPresent && authoriser.allowRead(c, sourcePeerId, auth.orElse("")).join()) {
+                        LOG.info("BITSWAP block present and allowed to read by authoriser");
                         MessageOuterClass.Message.Block blockP = MessageOuterClass.Message.Block.newBuilder()
                                 .setPrefix(ByteString.copyFrom(prefixBytes(c)))
                                 .setAuth(ByteString.copyFrom(ArrayOps.hexToBytes(auth.orElse(""))))
@@ -195,18 +218,21 @@ public class BitswapEngine {
                                 .build();
                         int blockSize = blockP.getSerializedSize();
                         if (blockSize + messageSize > maxMessageSize) {
+                            LOG.info("BITSWAP We've exceeded the message size, so we're sending it now");
                             buildAndSendMessages(Collections.emptyList(), presences, blocks, source::writeAndFlush);
                             presences = new ArrayList<>();
                             blocks = new ArrayList<>();
                             messageSize = 0;
                         }
                         messageSize += blockSize;
+                        LOG.info("BITSWAP Added a block to the message being sent." + blockP);
                         blocks.add(blockP);
                         recent.put(w, true);
                     } else if (sendDontHave) {
+                        LOG.info("BITSWAP block don't present or not allowed to read by authoriser and we must report that there is no block.");
                         if (blockPresent) {
                             deniedWants.put(w, true);
-                            LOG.info("Rejecting auth for block " + c + " from " + sourcePeerId.bareMultihash());
+                            LOG.info("BITSWAP The authorizer has denied access to the block we have. " + w.cid);
                         }
                         MessageOuterClass.Message.BlockPresence presence = MessageOuterClass.Message.BlockPresence.newBuilder()
                                 .setCid(ByteString.copyFrom(c.toBytes()))
@@ -215,12 +241,15 @@ public class BitswapEngine {
                         presences.add(presence);
                         messageSize += presence.getSerializedSize();
                     } else if (blockPresent) {
+                        LOG.info("BITSWAP block present, but not allowed to read by authoriser and we don't must report that there is no block.");
                         deniedWants.put(w, true);
-                        LOG.info("Rejecting repeated invalid auth for block " + c + " from " + sourcePeerId.bareMultihash());
+                        LOG.info("BITSWAP The authorizer has denied access to the block we have. " + w.cid);
                     }
                 } else {
+                    LOG.info("BITSWAP " + "message has HAVE want type");
                     boolean hasBlock = store.has(c).join();
                     if (hasBlock) {
+                        LOG.info("BITSWAP " + " we have this block " + c);
                         MessageOuterClass.Message.BlockPresence presence = MessageOuterClass.Message.BlockPresence.newBuilder()
                                 .setCid(ByteString.copyFrom(c.toBytes()))
                                 .setType(MessageOuterClass.Message.BlockPresenceType.Have)
@@ -228,19 +257,22 @@ public class BitswapEngine {
                         presences.add(presence);
                         messageSize += presence.getSerializedSize();
                     } else if (sendDontHave) {
+                        LOG.info("BITSWAP " + " we don't have this block and must send reply about it " + c);
                         MessageOuterClass.Message.BlockPresence presence = MessageOuterClass.Message.BlockPresence.newBuilder()
                                 .setCid(ByteString.copyFrom(c.toBytes()))
                                 .setType(MessageOuterClass.Message.BlockPresenceType.DontHave)
                                 .build();
                         presences.add(presence);
                         messageSize += presence.getSerializedSize();
+                    } else {
+                        LOG.info("BITSWAP " + " we don't have this block and must not send reply about it " + c);
                     }
                 }
             }
         }
 
-        LOG.fine("Bitswap received " + msg.getWantlist().getEntriesCount() + " wants, " + msg.getPayloadCount() +
-                " blocks and " + msg.getBlockPresencesCount() + " presences from " + sourcePeerId);
+        LOG.fine("BITSWAP Bitswap received " + msg.getWantlist().getEntriesCount() + " wants, " + msg.getPayloadCount() +
+                " blocks and " + msg.getBlockPresencesCount() + " presences from " + sourcePeerId.toBase58());
         boolean receivedWantedBlock = false;
         for (MessageOuterClass.Message.Block block : msg.getPayloadList()) {
             byte[] cidPrefix = block.getPrefix().toByteArray();
@@ -252,10 +284,10 @@ public class BitswapEngine {
             try {
                 long version = Cid.readVarint(bin);
                 Cid.Codec codec = Cid.Codec.lookup(Cid.readVarint(bin));
-                Multihash.Type type = Multihash.Type.lookup((int)Cid.readVarint(bin));
+                Multihash.Type type = Multihash.Type.lookup((int) Cid.readVarint(bin));
 //                int hashSize = (int)Cid.readVarint(bin);
                 if (type != Multihash.Type.sha2_256) {
-                    LOG.info("Unsupported hash algorithm " + type.name());
+                    LOG.info("BITSWAP Unsupported hash algorithm " + type.name());
                 } else {
                     byte[] hash = Hash.sha256(data);
                     Cid c = new Cid(version, codec, type, hash);
@@ -269,15 +301,19 @@ public class BitswapEngine {
                         }
                         waiter.result.complete(new HashedBlock(c, data));
                         localWants.remove(w);
+                        LOG.info("BITSWAP We got the block we wanted. " + c);
                     } else
-                        LOG.info("Received block we don't want: " + c + " from " + sourcePeerId.bareMultihash());
+                        LOG.info("BITSWAP Received block we don't want: " + c + " from " + sourcePeerId.bareMultihash());
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        if (! localWants.isEmpty())
-            LOG.fine("Remaining: " + localWants.size());
+
+        if (!localWants.isEmpty()) {
+            LOG.info("BITSWAP Local wishlist still not empty. ");
+            LOG.fine("BITSWAP Remaining: " + localWants.size());
+        }
         boolean receivedRequestedHave = false;
         for (MessageOuterClass.Message.BlockPresence blockPresence : msg.getBlockPresencesList()) {
             Cid c = Cid.cast(blockPresence.getCid().toByteArray());
@@ -291,17 +327,27 @@ public class BitswapEngine {
                 blockHaves.put(w, source.remotePeerId());
             }
         }
-        if (absentBlocks > 10 && presentBlocks == 0 && ! receivedRequestedHave && ! receivedWantedBlock) {
+        if (absentBlocks > 10 && presentBlocks == 0 && !receivedRequestedHave && !receivedWantedBlock) {
             // This peer is sending us lots of irrelevant requests, block them
+            LOG.info("BITSWAP This peer is sending us lots of irrelevant requests, block them");
             blockedPeers.put(source.remotePeerId(), true);
             source.close();
         }
 
-        if (presences.isEmpty() && blocks.isEmpty())
+        if (presences.isEmpty() && blocks.isEmpty()) {
+            LOG.info("BITSWAP presences and blocks is empty. return");
             return;
+        }
 
         buildAndSendMessages(Collections.emptyList(), presences, blocks, reply -> {
             sentBytes.inc(reply.getSerializedSize());
+            try {
+                String json2 = JsonFormat.printer().print(reply);
+                LOG.info("BITSWAP reply to sent  " + json2);
+            } catch (InvalidProtocolBufferException e) {
+                throw new RuntimeException(e);
+            }
+
             source.writeAndFlush(reply);
         });
     }
@@ -310,13 +356,16 @@ public class BitswapEngine {
                                      List<MessageOuterClass.Message.BlockPresence> presences,
                                      List<MessageOuterClass.Message.Block> blocks,
                                      Consumer<MessageOuterClass.Message> sender) {
+        LOG.info("BITSWAP start buildAndSendMessages");
         // make sure we stay within the message size limit
         MessageOuterClass.Message.Builder builder = MessageOuterClass.Message.newBuilder();
         int messageSize = 0;
-        for (int i=0; i < wants.size(); i++) {
+        for (int i = 0; i < wants.size(); i++) {
             MessageOuterClass.Message.Wantlist.Entry want = wants.get(i);
             int wantSize = want.getSerializedSize();
+            LOG.info("BITSWAP wantSize " + i + " " + wantSize);
             if (wantSize + messageSize > maxMessageSize) {
+                LOG.info("BITSWAP wantSize messageSize > maxMessageSize. send message " + messageSize);
                 sender.accept(builder.build());
                 builder = MessageOuterClass.Message.newBuilder();
                 messageSize = 0;
@@ -324,10 +373,12 @@ public class BitswapEngine {
             messageSize += wantSize;
             builder = builder.setWantlist(builder.getWantlist().toBuilder().addEntries(want).build());
         }
-        for (int i=0; i < presences.size(); i++) {
+
+        for (int i = 0; i < presences.size(); i++) {
             MessageOuterClass.Message.BlockPresence presence = presences.get(i);
             int presenceSize = presence.getSerializedSize();
             if (presenceSize + messageSize > maxMessageSize) {
+                LOG.info("BITSWAP presenceSize messageSize > maxMessageSize. send message" + messageSize);
                 sender.accept(builder.build());
                 builder = MessageOuterClass.Message.newBuilder();
                 messageSize = 0;
@@ -335,10 +386,11 @@ public class BitswapEngine {
             messageSize += presenceSize;
             builder = builder.addBlockPresences(presence);
         }
-        for (int i=0; i < blocks.size(); i++) {
+        for (int i = 0; i < blocks.size(); i++) {
             MessageOuterClass.Message.Block block = blocks.get(i);
             int blockSize = block.getSerializedSize();
             if (blockSize + messageSize > maxMessageSize) {
+                LOG.info("BITSWAP blockSize messageSize > maxMessageSize. send message" + messageSize);
                 sender.accept(builder.build());
                 builder = MessageOuterClass.Message.newBuilder();
                 messageSize = 0;
@@ -346,7 +398,9 @@ public class BitswapEngine {
             messageSize += blockSize;
             builder = builder.addPayload(block);
         }
-        if (messageSize > 0)
+        if (messageSize > 0) {
+            LOG.info("BITSWAP messageSize > 0. send message" + messageSize);
             sender.accept(builder.build());
+        }
     }
 }
