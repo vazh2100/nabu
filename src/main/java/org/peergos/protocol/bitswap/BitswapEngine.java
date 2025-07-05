@@ -7,6 +7,8 @@ import io.ipfs.multihash.Multihash;
 import io.libp2p.core.*;
 import io.libp2p.core.Stream;
 import io.libp2p.core.multiformats.*;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.prometheus.client.*;
 import org.peergos.*;
 import org.peergos.blockstore.*;
@@ -340,22 +342,25 @@ public class BitswapEngine {
         }
 
         buildAndSendMessages(Collections.emptyList(), presences, blocks, reply -> {
+            try {
+                String json = JsonFormat.printer().print(reply);
+                LOG.info("BITSWAP reply to be sent: " + json);
+            } catch (InvalidProtocolBufferException e) {
+                throw new RuntimeException(e);
+            }
+
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             try {
                 reply.writeDelimitedTo(out);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            source.writeAndFlush(out.toByteArray());
-            sentBytes.inc(reply.getSerializedSize());
-            try {
-                String json2 = JsonFormat.printer().print(reply);
-                LOG.info("BITSWAP reply to sent  " + json2);
-            } catch (InvalidProtocolBufferException e) {
-                throw new RuntimeException(e);
-            }
 
-            source.writeAndFlush(reply);
+            byte[] bytes = out.toByteArray();
+            sentBytes.inc(bytes.length);
+
+            ByteBuf buf = Unpooled.wrappedBuffer(bytes);
+            source.writeAndFlush(buf);
         });
     }
 
