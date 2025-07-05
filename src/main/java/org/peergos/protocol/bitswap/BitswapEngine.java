@@ -46,6 +46,11 @@ public class BitswapEngine {
     private final Set<PeerId> connections = new HashSet<>();
     private final BlockRequestAuthoriser authoriser;
     private AddressBook addressBook;
+    public BitswapEngineHandler beHandler;
+
+    public interface BitswapEngineHandler {
+        void execute(MessageOuterClass.Message msg, Multiaddr peerId);
+    }
 
     public BitswapEngine(Blockstore store, BlockRequestAuthoriser authoriser, int maxMessageSize, boolean blockAggressivePeers) {
         this.store = store;
@@ -371,9 +376,14 @@ public class BitswapEngine {
 //
 //                    ByteBuf buf = Unpooled.wrappedBuffer(bytes);
                     sentBytes.inc(reply.getSerializedSize());
-                    source.writeAndFlush(reply);
+                    source.writeAndFlush(reply); //  не работает
+                    Multiaddr addr =  source.getConnection().remoteAddress().withP2P(source.remotePeerId());
+                    beHandler.execute(reply, addr);
                 }
         );
+
+        source.close().join();
+
         source.closeWrite();
     }
 
