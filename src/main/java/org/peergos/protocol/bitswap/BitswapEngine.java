@@ -376,7 +376,8 @@ public class BitswapEngine {
 //
 //                    ByteBuf buf = Unpooled.wrappedBuffer(bytes);
                     sentBytes.inc(reply.getSerializedSize());
-                    source.writeAndFlush(reply); //  не работает
+//                    source.writeAndFlush(reply); //  не работает
+                    source.close().join();
                     Multiaddr addr =  source.getConnection().remoteAddress().withP2P(source.remotePeerId());
                     beHandler.execute(reply, addr);
                 }
