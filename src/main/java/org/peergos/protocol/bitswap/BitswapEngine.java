@@ -1,7 +1,6 @@
 package org.peergos.protocol.bitswap;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.CodedOutputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import io.ipfs.cid.Cid;
@@ -11,9 +10,7 @@ import io.libp2p.core.PeerId;
 import io.libp2p.core.Stream;
 import io.libp2p.core.multiformats.Multiaddr;
 import io.libp2p.transport.implementation.StreamOverNetty;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandler;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelPipeline;
 import io.prometheus.client.Counter;
 import org.peergos.BlockRequestAuthoriser;
@@ -165,10 +162,11 @@ public class BitswapEngine {
     public void receiveMessage(MessageOuterClass.Message msg, Stream source, Counter sentBytes) {
         System.out.println("Stream runtime class: " + source.getClass().getName());
         System.out.println("Stream runtime class: " + source);
-        ChannelPipeline pipeline = ((StreamOverNetty) source).getNettyChannel().pipeline();
-        for (Map.Entry<String, ChannelHandler> entry : pipeline) {
-            System.out.println("Handler name: " + entry.getKey() + ", class: " + entry.getValue().getClass().getName());
-        }
+        Channel channel = ((StreamOverNetty) source).getNettyChannel();
+        System.out.println("Channel runtime class: " + channel.getClass().getName());
+        System.out.println("Channel runtime class: " + channel);
+
+
 
         String peerId = source.remotePeerId().toBase58();
 
@@ -366,6 +364,8 @@ public class BitswapEngine {
             return;
         }
 
+        BitswapController controller = source.getConnection().muxerSession().createStream(new Bitswap(Bitswap.PROTOCOL_ID, this)).getController().join();
+
         buildAndSendMessages(Collections.emptyList(), presences, blocks, reply -> {
                     try {
                         String json = JsonFormat.printer().print(reply);
@@ -374,6 +374,7 @@ public class BitswapEngine {
                         throw new RuntimeException(e);
                     }
                     source.writeAndFlush(reply);
+                    controller.send(reply);
                 }
         );
     }
