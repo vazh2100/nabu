@@ -174,7 +174,7 @@ public class HostBuilder {
             RamAddressBook addrs = new RamAddressBook();
             b.getAddressBook().setImpl(addrs);
             // Uncomment to add mux debug logging
-            b.getDebug().getMuxFramesHandler().addLogger(LogLevel.INFO, "MUX");
+//            b.getDebug().getMuxFramesHandler().addLogger(LogLevel.INFO, "MUX");
             for (ProtocolBinding<?> protocol : protocols) {
                 b.getProtocols().add(protocol);
                 if (protocol instanceof AddressBookConsumer)
