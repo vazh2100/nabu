@@ -1,11 +1,11 @@
 package org.peergos.protocol.bitswap;
 
 import io.libp2p.core.Stream;
-import io.prometheus.client.*;
-import kotlin.*;
-import org.peergos.protocol.bitswap.pb.*;
+import io.prometheus.client.Counter;
+import kotlin.Unit;
+import org.peergos.protocol.bitswap.pb.MessageOuterClass;
 
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
 
 public class BitswapConnection implements BitswapController {
 
@@ -26,5 +26,13 @@ public class BitswapConnection implements BitswapController {
     @Override
     public CompletableFuture<Unit> close() {
         return conn.close();
+    }
+
+
+    @Override
+    public String toString() {
+        return "BitswapConnection{" +
+                "conn=" + conn +
+                '}';
     }
 }

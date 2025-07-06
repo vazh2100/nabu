@@ -1,43 +1,51 @@
 package org.peergos;
 
-import identify.pb.*;
-import io.ipfs.multiaddr.*;
+import io.ipfs.multiaddr.MultiAddress;
 import io.ipfs.multihash.Multihash;
-import io.libp2p.core.*;
-import io.libp2p.core.crypto.*;
-import io.libp2p.core.dsl.*;
-import io.libp2p.core.multiformats.*;
-import io.libp2p.core.multiformats.Protocol;
-import io.libp2p.core.multistream.*;
-import io.libp2p.core.mux.*;
-import io.libp2p.crypto.keys.*;
-import io.libp2p.etc.types.*;
-import io.libp2p.protocol.*;
-import io.libp2p.security.noise.*;
-import io.libp2p.security.tls.*;
-import io.libp2p.transport.quic.QuicTransport;
-import io.libp2p.transport.tcp.*;
+import io.libp2p.core.ConnectionHandler;
+import io.libp2p.core.Host;
+import io.libp2p.core.PeerId;
+import io.libp2p.core.StreamPromise;
 import io.libp2p.core.crypto.KeyKt;
-import io.netty.handler.logging.LogLevel;
-import org.peergos.blockstore.*;
-import org.peergos.protocol.autonat.*;
-import org.peergos.protocol.bitswap.*;
-import org.peergos.protocol.circuit.*;
-import org.peergos.protocol.dht.*;
+import io.libp2p.core.crypto.PrivKey;
+import io.libp2p.core.dsl.Builder;
+import io.libp2p.core.dsl.BuilderJKt;
+import io.libp2p.core.multiformats.Multiaddr;
+import io.libp2p.core.multiformats.Protocol;
+import io.libp2p.core.multistream.ProtocolBinding;
+import io.libp2p.core.mux.StreamMuxerProtocol;
+import io.libp2p.crypto.keys.Ed25519Kt;
+import io.libp2p.protocol.IdentifyBinding;
+import io.libp2p.protocol.IdentifyController;
+import io.libp2p.protocol.IdentifyProtocol;
+import io.libp2p.protocol.Ping;
+import io.libp2p.security.noise.NoiseXXSecureChannel;
+import io.libp2p.transport.quic.QuicTransport;
+import io.libp2p.transport.tcp.TcpTransport;
+import org.peergos.blockstore.Blockstore;
+import org.peergos.protocol.autonat.AutonatProtocol;
+import org.peergos.protocol.bitswap.Bitswap;
+import org.peergos.protocol.bitswap.BitswapEngine;
+import org.peergos.protocol.circuit.CircuitHopProtocol;
+import org.peergos.protocol.circuit.CircuitStopProtocol;
+import org.peergos.protocol.dht.Kademlia;
+import org.peergos.protocol.dht.KademliaEngine;
+import org.peergos.protocol.dht.ProviderStore;
+import org.peergos.protocol.dht.RecordStore;
 import org.peergos.util.Logging;
 
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
-import java.util.stream.*;
+import java.util.stream.Collectors;
 
 public class HostBuilder {
     private PrivKey privKey;
     private PeerId peerId;
-    private List<String> listenAddrs = new ArrayList<>();
-    private List<ProtocolBinding> protocols = new ArrayList<>();
-    private List<StreamMuxerProtocol> muxers = new ArrayList<>();
+    private final List<String> listenAddrs = new ArrayList<>();
+    private final List<ProtocolBinding> protocols = new ArrayList<>();
+    private final List<StreamMuxerProtocol> muxers = new ArrayList<>();
 
     private static final Logger LOG = Logging.LOG();
 
@@ -174,7 +182,7 @@ public class HostBuilder {
             RamAddressBook addrs = new RamAddressBook();
             b.getAddressBook().setImpl(addrs);
             // Uncomment to add mux debug logging
-            b.getDebug().getMuxFramesHandler().addLogger(LogLevel.INFO, "MUX");
+//            b.getDebug().getMuxFramesHandler().addLogger(LogLevel.INFO, "MUX");
             for (ProtocolBinding<?> protocol : protocols) {
                 b.getProtocols().add(protocol);
                 if (protocol instanceof AddressBookConsumer)
