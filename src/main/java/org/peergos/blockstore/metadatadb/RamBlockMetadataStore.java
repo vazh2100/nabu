@@ -1,8 +1,6 @@
-package org.peergos;
+package org.peergos.blockstore.metadatadb;
 
 import io.ipfs.cid.Cid;
-import org.peergos.blockstore.metadatadb.BlockMetadata;
-import org.peergos.blockstore.metadatadb.BlockMetadataStore;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -58,4 +56,10 @@ public class RamBlockMetadataStore implements BlockMetadataStore {
 
     @Override
     public void compact() {}
+
+    @Override
+    public long totalBlocksSize() {
+        return store.values().stream().mapToLong(meta -> meta.size).sum();
+    }
+
 }

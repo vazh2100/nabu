@@ -92,4 +92,9 @@ public class TypeLimitedBlockstore implements Blockstore {
         return blocks.getBlockMetadata(h);
     }
 
+    @Override
+    public CompletableFuture<Long> totalBlocksSize(boolean useBlockStore) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
 }

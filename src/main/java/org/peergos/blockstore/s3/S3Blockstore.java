@@ -472,4 +472,10 @@ public class S3Blockstore implements Blockstore {
             LOG.log(Level.SEVERE, e.getMessage(), e);
         }
     }
+
+    @Override
+    public CompletableFuture<Long> totalBlocksSize(boolean useBlockStore) {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
 }

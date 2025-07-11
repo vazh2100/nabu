@@ -7,7 +7,6 @@ import org.peergos.blockstore.metadatadb.*;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
-import java.util.stream.*;
 
 public class ProvidingBlockstore implements Blockstore {
 
@@ -68,5 +67,10 @@ public class ProvidingBlockstore implements Blockstore {
     @Override
     public CompletableFuture<BlockMetadata> getBlockMetadata(Cid h) {
         return target.getBlockMetadata(h);
+    }
+
+    @Override
+    public CompletableFuture<Long> totalBlocksSize(boolean useBlockStore) {
+        return target.totalBlocksSize(useBlockStore);
     }
 }

@@ -110,4 +110,8 @@ public class FilteredBlockstore implements Blockstore {
         return blocks.getBlockMetadata(h);
     }
 
+    @Override
+    public CompletableFuture<Long> totalBlocksSize(boolean useBlockStore) {
+        return blocks.totalBlocksSize(useBlockStore);
+    }
 }

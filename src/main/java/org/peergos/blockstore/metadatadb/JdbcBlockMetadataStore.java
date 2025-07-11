@@ -27,6 +27,7 @@ public class JdbcBlockMetadataStore implements BlockMetadataStore {
     private static final String REMOVE = "DELETE FROM blockmetadata where cid = ?;";
     private static final String LIST = "SELECT cid FROM blockmetadata;";
     private static final String SIZE = "SELECT COUNT(*) FROM blockmetadata;";
+    private static final String TOTAL_SIZE = "SELECT SUM(size) FROM blockmetadata;";
     private Supplier<Connection> conn;
     private final BlockMetadataSqlSupplier commands;
 
@@ -185,4 +186,21 @@ public class JdbcBlockMetadataStore implements BlockMetadataStore {
             throw new RuntimeException(sqe);
         }
     }
+
+    @Override
+    public long totalBlocksSize() {
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(TOTAL_SIZE)) {
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getLong(1);
+            } else {
+                return 0;
+            }
+        } catch (SQLException e) {
+            LOG.log(Level.WARNING, e.getMessage(), e);
+            throw new RuntimeException(e);
+        }
+    }
+
 }

@@ -42,4 +42,7 @@ public interface Blockstore {
     CompletableFuture<Boolean> bloomAdd(Cid cid);
 
     CompletableFuture<BlockMetadata> getBlockMetadata(Cid h);
+
+    CompletableFuture<Long> totalBlocksSize(boolean useBlockStore);
+
 }
