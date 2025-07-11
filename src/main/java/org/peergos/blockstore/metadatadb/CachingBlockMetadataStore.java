@@ -125,4 +125,11 @@ public class CachingBlockMetadataStore implements Blockstore {
                 metadata.put(c, target.getBlockMetadata(c).join());
         }
     }
+
+    @Override
+    public CompletableFuture<Long> totalBlocksSize(boolean useBlockStore) {
+        if (useBlockStore) return CompletableFuture.completedFuture(metadata.totalBlocksSize());
+        return target.totalBlocksSize(false);
+    }
+
 }

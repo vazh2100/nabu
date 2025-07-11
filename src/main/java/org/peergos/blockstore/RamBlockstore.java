@@ -76,4 +76,11 @@ public class RamBlockstore implements Blockstore {
         byte[] block = get(h).join().get();
         return Futures.of(new BlockMetadata(block.length, CborObject.getLinks(h, block)));
     }
+
+    public CompletableFuture<Long> totalBlocksSize(boolean useBlockStore) {
+        long totalSize = blocks.values().stream()
+                .mapToLong(b -> b.length)
+                .sum();
+        return CompletableFuture.completedFuture(totalSize);
+    }
 }

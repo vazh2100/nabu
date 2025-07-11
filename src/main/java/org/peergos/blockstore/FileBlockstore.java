@@ -4,6 +4,7 @@ import io.ipfs.cid.Cid;
 import io.ipfs.multihash.Multihash;
 import org.peergos.Hash;
 import org.peergos.blockstore.metadatadb.BlockMetadata;
+import org.peergos.cbor.CborObject;
 import org.peergos.util.*;
 
 import java.io.*;
@@ -184,6 +185,28 @@ public class FileBlockstore implements Blockstore {
 
     @Override
     public CompletableFuture<BlockMetadata> getBlockMetadata(Cid h) {
-        throw new IllegalStateException("Unsupported operation!");
+        Optional<byte[]> optionalData = get(h).join();
+        if (optionalData.isPresent()) {
+            byte[] block = optionalData.get();
+            return Futures.of(new BlockMetadata(block.length, CborObject.getLinks(h, block)));
+        } else {
+            return CompletableFuture.failedFuture(new RuntimeException("Block not found for CID: " + h));
+        }
+    }
+
+    @Override
+    public CompletableFuture<Long> totalBlocksSize(boolean useBlockStore) {
+        try (Stream<Path> walk = Files.walk(blocksRoot)) {
+            long totalSize = walk.filter(f -> Files.isRegularFile(f) &&
+                            f.toFile().length() > 0 &&
+                            f.getFileName().toString().endsWith(BLOCK_FILE_SUFFIX))
+                    .mapToLong(f -> f.toFile().length())
+                    .sum();
+            return CompletableFuture.completedFuture(totalSize);
+        } catch (IOException ioe) {
+            LOG.log(Level.WARNING, "Unable to calculate total size: " + ioe);
+            return CompletableFuture.failedFuture(ioe);
+        }
+
     }
 }
