@@ -478,4 +478,9 @@ public class S3Blockstore implements Blockstore {
         throw new UnsupportedOperationException("Not implemented yet");
     }
 
+    @Override
+    public CompletableFuture<Void> clear() {
+        throw new UnsupportedOperationException("Not implemented yet");
+    }
+
 }

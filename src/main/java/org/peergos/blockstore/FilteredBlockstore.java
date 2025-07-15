@@ -114,4 +114,9 @@ public class FilteredBlockstore implements Blockstore {
     public CompletableFuture<Long> totalBlocksSize(boolean useBlockStore) {
         return blocks.totalBlocksSize(useBlockStore);
     }
+
+    @Override
+    public CompletableFuture<Void> clear() {
+        return blocks.clear();
+    }
 }

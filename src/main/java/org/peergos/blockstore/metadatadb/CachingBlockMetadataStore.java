@@ -132,4 +132,10 @@ public class CachingBlockMetadataStore implements Blockstore {
         return target.totalBlocksSize(false);
     }
 
+    @Override
+    public CompletableFuture<Void> clear() {
+        metadata.clear();
+        return target.clear();
+    }
+
 }

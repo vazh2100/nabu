@@ -83,4 +83,11 @@ public class RamBlockstore implements Blockstore {
                 .sum();
         return CompletableFuture.completedFuture(totalSize);
     }
+
+    @Override
+    public CompletableFuture<Void> clear() {
+        blocks.clear();
+        return CompletableFuture.completedFuture(null);
+    }
+
 }

@@ -52,4 +52,6 @@ public interface BlockMetadataStore {
     void compact();
 
     long totalBlocksSize();
+
+    void clear();
 }

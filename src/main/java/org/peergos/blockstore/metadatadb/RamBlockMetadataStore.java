@@ -62,4 +62,9 @@ public class RamBlockMetadataStore implements BlockMetadataStore {
         return store.values().stream().mapToLong(meta -> meta.size).sum();
     }
 
+    @Override
+    public void clear() {
+        store.clear();
+    }
+
 }

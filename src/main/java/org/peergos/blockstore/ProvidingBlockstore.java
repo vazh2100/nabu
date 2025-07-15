@@ -73,4 +73,9 @@ public class ProvidingBlockstore implements Blockstore {
     public CompletableFuture<Long> totalBlocksSize(boolean useBlockStore) {
         return target.totalBlocksSize(useBlockStore);
     }
+
+    @Override
+    public CompletableFuture<Void> clear() {
+        return target.clear();
+    }
 }

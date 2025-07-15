@@ -207,6 +207,25 @@ public class FileBlockstore implements Blockstore {
             LOG.log(Level.WARNING, "Unable to calculate total size: " + ioe);
             return CompletableFuture.failedFuture(ioe);
         }
+    }
 
+    @Override
+    public CompletableFuture<Void> clear() {
+        try (Stream<Path> walk = Files.walk(blocksRoot)) {
+            walk.filter(f -> Files.isRegularFile(f) &&
+                            f.toFile().length() > 0 &&
+                            f.getFileName().toString().endsWith(BLOCK_FILE_SUFFIX))
+                    .forEach(f -> {
+                        try {
+                            Files.delete(f);
+                        } catch (IOException e) {
+                            LOG.log(Level.WARNING, "Failed to delete file: " + f, e);
+                        }
+                    });
+            return CompletableFuture.completedFuture(null);
+        } catch (IOException ioe) {
+            LOG.log(Level.WARNING, "Unable to delete block files: " + ioe);
+            return CompletableFuture.failedFuture(ioe);
+        }
     }
 }

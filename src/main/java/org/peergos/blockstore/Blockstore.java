@@ -45,4 +45,6 @@ public interface Blockstore {
 
     CompletableFuture<Long> totalBlocksSize(boolean useBlockStore);
 
+    CompletableFuture<Void> clear();
+
 }
