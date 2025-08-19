@@ -1,6 +1,7 @@
 package org.peergos.blockstore.metadatadb;
 
 import io.ipfs.cid.Cid;
+import org.peergos.blockstore.pb.Dag;
 import org.peergos.cbor.CborObject;
 
 import java.util.Collections;
@@ -44,6 +45,18 @@ public interface BlockMetadataStore {
                     .collect(Collectors.toList());
             BlockMetadata meta = new BlockMetadata(data.length, links);
             return meta;
+        } else if (block.codec == Cid.Codec.DagProtobuf) {
+            try {
+                Dag.PBNode node = Dag.PBNode.parseFrom(data);
+
+                List<Cid> links = node.getLinksList().stream()
+                        .map(link -> Cid.cast(link.getHash().toByteArray()))
+                        .collect(Collectors.toList());
+
+                return new BlockMetadata(data.length, links);
+            } catch (Exception e) {
+                throw new IllegalStateException("Failed to parse DagProtobuf block", e);
+            }
         } else {
             throw new IllegalStateException("Unsupported Block type");
         }
