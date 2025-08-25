@@ -189,7 +189,7 @@ public class JdbcBlockMetadataStore implements BlockMetadataStore {
     }
 
     @Override
-    public long totalBlocksSize() {
+    public synchronized long totalBlocksSize() {
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(TOTAL_SIZE)) {
             ResultSet rs = stmt.executeQuery();
